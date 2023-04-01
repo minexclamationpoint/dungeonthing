@@ -6,11 +6,13 @@ using namespace std;
 
 struct Node {
     std::string id;
-    std::vector<std::string> neighbors;
+    //Vector of edges, with a connected node and a weight
+    std::vector<std::pair<std::string, int>> neighbors;
 
     Node(const std::string& id) : id(id) {}
 };
 
+//TODO: add x,y values to dungeon nodes
 class DungeonGenerator {
 public:
     DungeonGenerator(int numNodes, float connectProbability) 
@@ -22,14 +24,17 @@ public:
         }
 
         // Connect nodes randomly
+        //TODO: start at central node, branch outward from there to create a contiguous dungeon
+        //TODO: implement cycles 
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_real_distribution<> dis(0, 1);
         for (int i = 0; i < numNodes; ++i) {
             for (int j = i + 1; j < numNodes; ++j) {
                 if (dis(gen) < connectProbability) {
-                    nodes[i].neighbors.push_back(nodes[j].id);
-                    nodes[j].neighbors.push_back(nodes[i].id);
+                    float newFloat = dis(gen) * 100;
+                    nodes[i].neighbors.push_back((nodes[j].id, (int)newFloat));
+                    nodes[j].neighbors.push_back((nodes[i].id, (int)newFloat));
                 }
             }
         }
@@ -46,6 +51,7 @@ private:
 };
 
 int main() {
+    //TODO: add a printing of all of the weights
     DungeonGenerator dungeon(100, 0.5f);
 
     std::vector<Node>& nodes = dungeon.getNodes();
