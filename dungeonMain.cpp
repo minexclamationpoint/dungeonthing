@@ -3,6 +3,8 @@
 #include <queue>
 #include <cmath>
 #include <SFML/Graphics.hpp>
+#include <map>
+#include <set>
 
 using namespace std;
 using namespace sf;
@@ -16,8 +18,9 @@ const int dy[4] = { 0, 1, 0, -1 };
 
 struct Cell {
 	int x, y;
-	int costTravelTo = 0;
+	int weight = 0;
 	bool wall = false;
+	bool path = false;
 	bool visited = false;
 	bool isStartCell = false;
 	bool isEndCell = false;
@@ -37,11 +40,22 @@ void drawGrid(vector<vector<Cell>>& grid, RenderWindow& window) {
 			RectangleShape rect(Vector2f(offset, offset));
 			rect.setOutlineThickness(1);
 			rect.setOutlineColor(Color::Black);
-			if (grid[i][j].wall) {
+			if (grid[i][j].isStartCell || grid[i][j].isEndCell) {
+				rect.setFillColor(Color::Green);
+			}
+			else if (grid[i][j].wall) {
 				rect.setFillColor(Color::Black);
 			}
+			else if (grid[i][j].path) {
+				rect.setFillColor(Color::Cyan);
+			}
 			else {
-				rect.setFillColor(Color::White);
+				//for regular cells (not wall, start/end, or part of the path
+				//create a gradient from white to red, red being cells with highest weight
+				Color color(255, 255, 255);
+				color.b -= grid[i][j].weight*20;
+				color.g -= grid[i][j].weight*20;
+				rect.setFillColor(color);
 			}
 			rect.setPosition(j * offset, i * offset);
 			window.draw(rect);
@@ -49,6 +63,7 @@ void drawGrid(vector<vector<Cell>>& grid, RenderWindow& window) {
 	}
 }
 
+/*
 void drawPath(Cell* end, RenderWindow& window) {
 	VertexArray lines(LinesStrip, 0);
 	while (end != nullptr) {
@@ -58,6 +73,7 @@ void drawPath(Cell* end, RenderWindow& window) {
 	}
 	window.draw(lines);
 }
+*/
 
 float heuristic(Cell* a, Cell* b) {
 	return sqrt(pow(a->x - b->x, 2) + pow(a->y - b->y, 2));
@@ -78,6 +94,82 @@ vector<Cell*> getNeighbors(vector<vector<Cell>>& grid, Cell* cell) {
 	return neighbors;
 }
 
+//sets weight/"danger" of a cell to a random number between 1 and 10
+void weightCells(vector<vector<Cell>>& grid) {
+	for (int i = 0; i < Nx; i++) {
+		for (int j = 0; j < Ny; j++) {
+			grid[i][j].weight = rand() % 10 + 1;
+		}
+	}
+}
+
+//the dijkstra algorithm hopefully
+void Dijkstra(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
+	//leftmost x coord is 1, uppermost y coord is 1
+	//rightmost x coord is Nx-2, downmost y coord is Ny-2
+	//the coordinates here work like [y][x]
+	map<Cell*, Cell*> predecessor;
+	map<Cell*, int> distance;
+	set<Cell*> done;
+	//set of pairs is ordered based on the first value
+	set<pair<int, Cell*>> notDone;
+	Cell* current;
+
+	//put everything into the notDone set
+	for (int i = 0; i < Nx; i++) {
+		for (int j = 0; j < Ny; j++) {
+			if (!grid[i][j].wall) {
+				notDone.insert(make_pair(INT_MAX, & grid[i][j]));
+				distance[&grid[i][j]] = INT_MAX;
+			}
+		}
+	}
+	
+	//set start node's distance to 0
+	distance[start] = 0;
+	notDone.erase(make_pair(INT_MAX, start));
+	notDone.insert(make_pair(0, start));
+
+	//set current node to start
+	current = start;
+
+	while (!notDone.empty()) {
+		//find the cell with the smallest distance in the not done set
+		//it should just be first
+		//and make that the current node
+		current = notDone.begin()->second;
+		
+		//add current node to "done set" (and remove from not done)
+		done.insert(current);
+		notDone.erase(make_pair(distance[current], current));
+
+		//relax all of the current node's edges
+		//get all of the current node's neighbors
+		auto v = getNeighbors(grid, current);
+		for (int i = 0; i < v.size(); i++) {
+			if (distance[v[i]] > distance[current] + current->weight)
+			{
+				//update the distance
+				//have to do it for the notdone set as well
+				notDone.erase(make_pair(distance[v[i]], v[i]));
+				distance[v[i]] = distance[current] + current->weight;
+				notDone.insert(make_pair(distance[v[i]], v[i]));
+				//update the predecessor
+				predecessor[v[i]] = current;
+			}
+		}
+		
+	}
+
+	//iterate backwards through the predecessor map
+	while (predecessor[goal]) {
+		goal = predecessor[goal];
+		goal->path = true;
+	}
+	
+}
+
+//A* algorithm :3
 priority_queue<Cell*, vector<Cell*>, Compare> AStar(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
 	priority_queue<Cell*, vector<Cell*>, Compare> frontier;
 	frontier.push(start);
@@ -135,9 +227,19 @@ int main() {
 	// create walls
 	createRandomWalls(grid, wallProb); // 40% chance of a cell being a wall
 
-	// run A*
+	// set start and goal
 	Cell* start = &grid[1][1];
 	Cell* goal = &grid[Nx - 2][Ny - 2];
+	start->isStartCell = true;
+	goal->isEndCell = true;
+	//make sure they aren't walls <3
+	start->wall = false;
+	goal->wall = false;
+	
+	//run Dijkstra
+	//Dijkstra(grid, start, goal);
+	
+	//run A*
 	//priority_queue<Cell*, vector<Cell*>, Compare> frontier = AStar(grid, start, goal);
 
 	// draw grid and path
