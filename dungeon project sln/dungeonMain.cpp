@@ -30,7 +30,7 @@ struct Cell {
 	float f = 0, g = 0, h = 0; // A* values
 	Cell* parent = nullptr;
 	//Old getNeighbors() function, updated to instead set the neighbors private instance variable. 
-	//No constructor, the nodes just have connections lazily
+	//No constructor, the nodes just have connections upon being written
 	void setNeighbors(vector<vector<Cell>>& grid, Cell* cell) {
 		for (int i = 0; i < 4; i++) {
 			int nx = cell->x + dx[i], ny = cell->y + dy[i];
@@ -64,6 +64,16 @@ void drawGrid(vector<vector<Cell>>& grid, RenderWindow& window) {
 			window.draw(rect);
 		}
 	}
+}
+
+vector<Cell*> getNeighbors(Cell* cell) {
+	vector<Cell*> nVec;
+	for (Cell* next : cell->neighbors) {
+		if (next) {
+			nVec.push_back(next);
+		}
+	}
+	return nVec;
 }
 
 void drawPath(Cell* end, RenderWindow& window) {
