@@ -21,16 +21,23 @@ struct Cell {
 	int weight = 0;
 	bool wall = false;
 	bool path = false;
-	bool visited = false;
 	bool isStartCell = false;
 	bool isEndCell = false;
-	float f = 0, g = 0, h = 0; // A* values
+	//weighted distance for dijkstra
+	int distance = INT_MAX;
+	float f = FLT_MAX, g = FLT_MAX, h = FLT_MAX; // A* values
 	Cell* parent = nullptr;
 };
 
 struct Compare {
 	bool operator() (const Cell* a, const Cell* b) const {
 		return a->f > b->f;
+	}
+};
+
+struct compareDist {
+	bool operator() (const Cell* a, const Cell* b) const {
+		return a->distance > b->distance;
 	}
 };
 
@@ -103,101 +110,94 @@ void weightCells(vector<vector<Cell>>& grid) {
 	}
 }
 
-//the dijkstra algorithm hopefully
+//Dijkstra pathfinding algorithm
 void Dijkstra(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
 	//leftmost x coord is 1, uppermost y coord is 1
 	//rightmost x coord is Nx-2, downmost y coord is Ny-2
 	//the coordinates here work like [y][x]
-	map<Cell*, Cell*> predecessor;
-	map<Cell*, int> distance;
-	set<Cell*> done;
-	//set of pairs is ordered based on the first value
-	set<pair<int, Cell*>> notDone;
+	map<Cell*, bool> visited;
+	priority_queue<Cell*, vector<Cell*>, compareDist> frontier;
 	Cell* current;
 
-	//put everything into the notDone set
-	for (int i = 0; i < Nx; i++) {
-		for (int j = 0; j < Ny; j++) {
-			if (!grid[i][j].wall) {
-				notDone.insert(make_pair(INT_MAX, & grid[i][j]));
-				distance[&grid[i][j]] = INT_MAX;
+	//set start node's distance to 0
+	start->distance = 0;
+	frontier.push(start);
+
+	//set current node to start
+	current = start;
+	
+	while (!frontier.empty()) {
+		//find the cell with the smallest distance in the not done set
+		//make that the current node, pop
+		current = frontier.top();
+		frontier.pop();
+		visited[current] = true;
+		if (current == goal) {
+			break;
+		}
+		
+		//relax all of the current node's edges
+		//get all of the current node's neighbors
+		vector<Cell*> neighbors = getNeighbors(grid, current);
+		for (Cell* next : neighbors) {
+			if (next->distance > current->distance + next->weight)
+			{
+				//update the distance
+				//have to do it for the notdone set as well
+				next->distance = current->distance + next->weight;
+				//update the predecessor
+				next->parent = current;
+				if (!visited[next]) {
+					frontier.push(next);
+				}
 			}
 		}
 	}
 	
-	//set start node's distance to 0
-	distance[start] = 0;
-	notDone.erase(make_pair(INT_MAX, start));
-	notDone.insert(make_pair(0, start));
-
-	//set current node to start
-	current = start;
-
-	while (!notDone.empty()) {
-		//find the cell with the smallest distance in the not done set
-		//it should just be first
-		//and make that the current node
-		current = notDone.begin()->second;
-		
-		//add current node to "done set" (and remove from not done)
-		done.insert(current);
-		notDone.erase(make_pair(distance[current], current));
-
-		//relax all of the current node's edges
-		//get all of the current node's neighbors
-		auto v = getNeighbors(grid, current);
-		for (int i = 0; i < v.size(); i++) {
-			if (distance[v[i]] > distance[current] + current->weight)
-			{
-				//update the distance
-				//have to do it for the notdone set as well
-				notDone.erase(make_pair(distance[v[i]], v[i]));
-				distance[v[i]] = distance[current] + current->weight;
-				notDone.insert(make_pair(distance[v[i]], v[i]));
-				//update the predecessor
-				predecessor[v[i]] = current;
-			}
-		}
-		
-	}
-
-	//iterate backwards through the predecessor map
-	while (predecessor[goal]) {
-		goal = predecessor[goal];
-		goal->path = true;
+	current = goal;
+	while (current->parent) {
+		current->path = true;
+		current = current->parent;
 	}
 	
 }
 
 //A* algorithm :3
-priority_queue<Cell*, vector<Cell*>, Compare> AStar(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
+void AStar(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
 	priority_queue<Cell*, vector<Cell*>, Compare> frontier;
 	frontier.push(start);
+	map<Cell*, bool> visited;
 
+	Cell* current;
 	while (!frontier.empty()) {
-		Cell* current = frontier.top();
+		current = frontier.top();
 		frontier.pop();
 		if (current == goal) {
-			return frontier;
+			break;
 		}
-		current->visited = true;
+		visited[current] = true;
+
 		vector<Cell*> neighbors = getNeighbors(grid, current);
 		for (Cell* next : neighbors) {
 			float newCost = current->g + 1;
-			if (newCost < next->g || !next->visited) {
+			if (newCost < next->g || !visited[next]) {
 				next->g = newCost;
 				next->h = heuristic(next, goal);
 				next->f = next->g + next->h;
 				next->parent = current;
-				if (!next->visited) {
+				if (!visited[next]) {
 					frontier.push(next);
-					next->visited = true;
+					visited[next] = true;
 				}
 			}
 		}
 	}
-
-	return frontier;
+	
+	current = goal;
+	while (current->parent) {
+		current->path = true;
+		current = current->parent;
+	}
 }
 
 void createRandomWalls(vector<vector<Cell>>& grid, int wallProbability) {
@@ -226,7 +226,9 @@ int main() {
 
 	// create walls
 	createRandomWalls(grid, wallProb); // 40% chance of a cell being a wall
-
+	//create edge weights
+	weightCells(grid);
+	
 	// set start and goal
 	Cell* start = &grid[1][1];
 	Cell* goal = &grid[Nx - 2][Ny - 2];
@@ -236,12 +238,19 @@ int main() {
 	start->wall = false;
 	goal->wall = false;
 	
-	//run Dijkstra
-	//Dijkstra(grid, start, goal);
+	cout << "Enter 1 for Dijkstra, 2 for A*" << endl;
+	int n;
+	cin >> n;
 	
-	//run A*
-	//priority_queue<Cell*, vector<Cell*>, Compare> frontier = AStar(grid, start, goal);
-
+	if(n==1) {
+		//run Dijkstra
+		//Dijkstra(grid, start, goal);
+	}
+	else if(n==2) {
+		//run A*
+		//AStar(grid, start, goal);
+	}
+	
 	// draw grid and path
 	RenderWindow window(VideoMode(Nx * offset, Ny * offset), "Shortest Path");
 	while (window.isOpen()) {
