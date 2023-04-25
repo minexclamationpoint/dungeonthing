@@ -253,7 +253,7 @@ int main() {
 		}
 		window.clear(Color::White);
 		drawGrid(grid, window);
-		drawPath(goal, window);
+		//drawPath(goal, window);
 		window.display();
 	}
 	return 0;
