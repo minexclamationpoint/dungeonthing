@@ -238,17 +238,17 @@ int main() {
 	start->wall = false;
 	goal->wall = false;
 	
-	cout << "Enter 1 for Dijkstra, 2 for A*" << endl;
+	cout << "Enter 1 for Dijkstra, 2 for A*, 3 for no path." << endl;
 	int n;
 	cin >> n;
 	
 	if(n==1) {
 		//run Dijkstra
-		//Dijkstra(grid, start, goal);
+		Dijkstra(grid, start, goal);
 	}
 	else if(n==2) {
 		//run A*
-		//AStar(grid, start, goal);
+		AStar(grid, start, goal);
 	}
 	
 	// draw grid and path
