@@ -147,6 +147,7 @@ void Dijkstra(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
 		
 		//relax all of the current node's edges
 		//get all of the current node's neighbors
+		current->setNeighbors(grid, current);
 		for (Cell* next : current->neighbors) {
 			if (next->distance > current->distance + next->weight)
 			{
@@ -184,7 +185,7 @@ void AStar(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
 			break;
 		}
 		visited[current] = true;
-
+		current->setNeighbors(grid, current);
 		for (Cell* next : current->neighbors) {
 			float newCost = current->g + 1;
 			if (newCost < next->g || !visited[next]) {
