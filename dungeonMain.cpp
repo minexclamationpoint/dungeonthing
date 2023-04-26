@@ -243,11 +243,7 @@ int main() {
 		}
 	}
 
-	// create walls
-	createRandomWalls(grid, wallProb); // 40% chance of a cell being a wall
-	//create edge weights
-	weightCells(grid);
-	
+	//TODO: allow for input of end cell, make it so the graph renders first, then the algo runs
 	// set start and goal
 	Cell* start = &grid[1][1];
 	Cell* goal = &grid[Nx - 2][Ny - 2];
@@ -256,6 +252,8 @@ int main() {
 	//make sure they aren't walls <3
 	start->wall = false;
 	goal->wall = false;
+	createRooms(grid, wallProb, start); // 40% chance of a cell being a wall
+	weightCells(grid);
 	
 	cout << "Enter 1 for Dijkstra, 2 for A*, 3 for no path." << endl;
 	int n;
