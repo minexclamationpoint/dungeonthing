@@ -26,7 +26,7 @@ struct Cell {
 	Cell* neighbors[4];
 	//weighted distance for dijkstra
 	int distance = INT_MAX;
-	float f = FLT_MAX, g = FLT_MAX, h = FLT_MAX; // A* values
+	float f = 0, g = 0, h = 0; // A* values
 	Cell* parent = nullptr;
 	void setNeighbors(vector<vector<Cell>>& grid, Cell* cell){
 		for (int i = 0; i < 4; i++){
@@ -171,36 +171,34 @@ void Dijkstra(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
 	
 }
 
-//A* algorithm :3
 void AStar(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
 	priority_queue<Cell*, vector<Cell*>, Compare> frontier;
-	frontier.push(start);
 	map<Cell*, bool> visited;
-
+	frontier.push(start);
 	Cell* current;
-	while (!frontier.empty()) {
-		current = frontier.top();
-		frontier.pop();
-		if (current == goal) {
-			break;
-		}
-		visited[current] = true;
-		current->setNeighbors(grid, current);
-		for (Cell* next : current->neighbors) {
-			float newCost = current->g + 1;
-			if (newCost < next->g || !visited[next]) {
-				next->g = newCost;
-				next->h = heuristic(next, goal);
-				next->f = next->g + next->h;
-				next->parent = current;
-				if (!visited[next]) {
-					frontier.push(next);
-					visited[next] = true;
+
+	while(!frontier.empty()) {
+			current = frontier.top();
+			frontier.pop();
+			if (current == goal) {
+				break;
+			}
+			visited[current] = true;
+			vector<Cell*> neighbors = getNeighbors(grid, current);
+			for (Cell* next : neighbors) {
+				float newCost = current->g + next->weight;
+				if (newCost < next->g || !visited[next]) {
+					next->g = newCost;
+					next->h = heuristic(next, goal);
+					next->f = next->g + next->h;
+					next->parent = current;
+					if (!visited[next]) {
+						frontier.push(next);
+						visited[next] = true;
+					}
 				}
 			}
 		}
-	}
-	
 	current = goal;
 	while (current->parent) {
 		current->path = true;
