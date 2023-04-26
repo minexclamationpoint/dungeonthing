@@ -9,7 +9,7 @@
 using namespace std;
 using namespace sf;
 
-const int wallProb = 15; // size of grid
+const int wallProb = 54; // size of grid
 const int Nx = 100; // size of grid
 const int Ny = 100; // size of grid
 const int offset = 10;
@@ -23,10 +23,19 @@ struct Cell {
 	bool path = false;
 	bool isStartCell = false;
 	bool isEndCell = false;
+	Cell* neighbors[4];
 	//weighted distance for dijkstra
 	int distance = INT_MAX;
 	float f = FLT_MAX, g = FLT_MAX, h = FLT_MAX; // A* values
 	Cell* parent = nullptr;
+	void setNeighbors(vector<vector<Cell>>& grid, Cell* cell){
+		for (int i = 0; i < 4; i++){
+			int nx = cell->x + dx[i], ny = cell->y + dy[i];
+			if (inBounds(nx, ny)) {
+				neighbors[i] = &grid[nx][ny]
+			}
+		}
+	}
 };
 
 struct Compare {
@@ -138,8 +147,7 @@ void Dijkstra(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
 		
 		//relax all of the current node's edges
 		//get all of the current node's neighbors
-		vector<Cell*> neighbors = getNeighbors(grid, current);
-		for (Cell* next : neighbors) {
+		for (Cell* next : current->neighbors) {
 			if (next->distance > current->distance + next->weight)
 			{
 				//update the distance
@@ -177,8 +185,7 @@ void AStar(vector<vector<Cell>>& grid, Cell* start, Cell* goal) {
 		}
 		visited[current] = true;
 
-		vector<Cell*> neighbors = getNeighbors(grid, current);
-		for (Cell* next : neighbors) {
+		for (Cell* next : current->neighbors) {
 			float newCost = current->g + 1;
 			if (newCost < next->g || !visited[next]) {
 				next->g = newCost;
@@ -210,6 +217,17 @@ void createRandomWalls(vector<vector<Cell>>& grid, int wallProbability) {
 	}
 }
 
+void createRooms(vector<vector<Cell>>& grid, int wallProbability, Cell* startCell) {
+	//sets the neighbors for startCell
+	startCell->setNeighbors(grid, startCell);
+	//iterates through the neighbors vector, recursively calls createRooms() and clears the next wall, if the random number is cleared
+	for (Cell* next : startCell->neighbors) {
+		if ((next) && (rand() % 100 + 1 < wallProbability) && (next->wall) ) {
+			next->wall = false;
+			createRooms(grid, wallProbability, next);
+		}
+	}
+}
 
 int main() {
 	// create grid
