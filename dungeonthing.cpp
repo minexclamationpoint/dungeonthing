@@ -79,18 +79,6 @@ void drawGrid(vector<vector<Cell>>& grid, RenderWindow& window) {
 	}
 }
 
-/*
-void drawPath(Cell* end, RenderWindow& window) {
-	VertexArray lines(LinesStrip, 0);
-	while (end != nullptr) {
-		Vertex v(Vector2f(end->y * offset + 15, end->x * offset + 15), Color::Red);
-		lines.append(v);
-		end = end->parent;
-	}
-	window.draw(lines);
-}
-*/
-
 float heuristic(Cell* a, Cell* b) {
 	return sqrt(pow(a->x - b->x, 2) + pow(a->y - b->y, 2));
 }
