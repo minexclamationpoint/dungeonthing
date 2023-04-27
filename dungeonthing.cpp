@@ -5,6 +5,7 @@
 #include <SFML/Graphics.hpp>
 #include <map>
 #include <set>
+#include <chrono>
 
 using namespace std;
 using namespace sf;
@@ -243,19 +244,24 @@ int main() {
 	start->wall = false;
 	goal->wall = false;
 	
-	cout << "Enter 1 for Dijkstra, 2 for A*, 3 for no path." << endl;
+	cout << "Enter 1 for Dijkstra, 2 for A*, or 3 for no path." << endl;
 	int n;
 	cin >> n;
-	
-	if(n==1) {
+
+	auto timeStart = std::chrono::steady_clock::now();
+	if (n == 1) {
 		//run Dijkstra
 		Dijkstra(grid, start, goal);
 	}
-	else if(n==2) {
+	else if (n == 2) {
 		//run A*
 		AStar(grid, start, goal);
 	}
-	
+	auto timeEnd = std::chrono::steady_clock::now();
+
+	std::chrono::duration<double> elapsed_seconds = timeEnd - timeStart;
+	std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
+
 	// draw grid and path
 	RenderWindow window(VideoMode(Nx * offset, Ny * offset), "Shortest Path");
 	while (window.isOpen()) {
